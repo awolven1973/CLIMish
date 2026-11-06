@@ -21,7 +21,7 @@
    (buttons-per-column 50)
    (button-height 34)
    (column-width (loop for i from 0 below (the button size)
-		       maximize (the (button i) text-size)))
+		       maximize (or (the (button i) text-size) 2)))
 
    (width (* (ceiling (the button size) (the buttons-per-column)) (the column-width)))
    (height (+ (* (min (the buttons-per-column) (the button size)) (the button-height))

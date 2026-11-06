@@ -5,8 +5,14 @@
   ((title "Error Report")
    (parent-height/width (multiple-value-list (clui:window-framebuffer-size (the parent))))
    (x (- (first (the parent-height/width)) (the width)))
-   (y (- (second (the parent-height/width)) 240))
-   (height 120)))
+   ;;(y (- (second (the parent-height/width)) 240))
+   (height 120))
+  :attributes
+  ((y :uncached (let ((proposed (incf (send (the parent) current-error-report-y) (1+ (the height)))))
+		  (if (> (+ proposed (the height)) (send (the parent) current-error-report-y))
+		      (progn (setf (send (the parent) current-error-report-y) 0)
+			     (incf (send (the parent) current-error-report-y) (1+ (the height))))
+		      proposed)))))
 
 (defmethod rm-draw-node :after ((self error-report))
   (unless (the iconified?)
@@ -50,8 +56,7 @@
   :components
   ((test :type 'test-error-node)))
 
-(defun cad-command-p (thing)
-  (declare (ignore thing))
+(defmethod cad-command-p (thing)
   nil)
 
 (define-presentation-method accept ((type climish::not-everywhere-command)

@@ -240,8 +240,12 @@
 (define-gesture "Editor Compile Defun" "Lisp" #k"Ctrl-c" #k"Ctrl-c")
 (define-gesture "Editor Compile Buffer File" "Lisp"  #k"Ctrl-c" #k"Ctrl-k")
 
+#+NOMORE
 (when (boundp 'krma::*app*)
-  (mapcar #'rebuild-command-table
-	  (remove-if-not #'(lambda (item)
-			     (typep item 'text-editor-view-mixin))
-			 (krma::node-children (krma::application-scene krma::*app*)))))
+  (let ((text-editor-views
+	  (fset:filter #'(lambda (item)
+			   (typep item 'text-editor-view-mixin))
+		       (krma::node-children
+			(krma::application-scene krma::*app*)))))
+    (fset:do-set (view text-editor-views)
+      (rebuild-command-table view))))

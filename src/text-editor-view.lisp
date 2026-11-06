@@ -94,8 +94,6 @@
   (setf (hi::window-height view) height-lines)
 
   (invalidate-hemlock-window-size view)
-
-  ;;(hi::update-window-image view)
   
   view)
 

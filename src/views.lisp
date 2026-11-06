@@ -550,11 +550,11 @@
   (let ((scene (send homemade-window scene)))
     ;; remove the graphical representation from the draw-lists
     (setf (krma::node-children scene)
-	  (remove homemade-window (krma::node-children scene)))
+	  (fset:less (krma::node-children scene) homemade-window))
     (when (eq homemade-window (focused-window (application-frame homemade-window)))
       (unfocus-window homemade-window))
     (forget-object-recursively homemade-window)
-    (unless (krma::node-children scene)
+    (unless (fset:empty? (krma::node-children scene))
       (setf (krma::immediate-mode-work-function-1 (window-display homemade-window)) nil))
     (values)))
 
@@ -589,9 +589,13 @@
       (progn (setf (the iconified?) nil)
 	     (focus-window self))
       (let ((scene (the scene)))
-	(let ((siblings (remove self (remove-if-not #'(lambda (node)
-							(typep node 'homemade-window-mixin))
-						    (krma::node-children scene)))))
+	(let ((siblings
+		(fset:convert
+		 'list
+		 (fset:less (fset:filter #'(lambda (node)
+					     (typep node 'homemade-window-mixin))
+					 (krma::node-children scene))
+			    self))))
 	  (setq siblings (sort siblings #'< :key #'(lambda (self) (the z-index))))
 	  (loop for i from 0
 		for sibling in siblings
@@ -681,20 +685,19 @@
   (call-next-method)
   
   (let ((highest-z-index 0)
-	#+NIL
-	(application-frame (application-frame self)))
-
-    (let ((siblings (remove-if-not #'(lambda (thing)
-				       (typep thing 'homemade-window-mixin))
-				   (krma::node-children (the scene)))))
-      
-      (when siblings
-	(setq highest-z-index
-	      (loop for part in siblings
-		    maximize (the-part z-index)))))
-
+	(siblings (fset:filter #'(lambda (thing)
+				   (typep thing 'homemade-window-mixin))
+			       (krma::node-children (the scene)))))
+    
+    (setq highest-z-index
+	  (fset:reduce #'max siblings
+		       :key #'(lambda (part)
+				(the-part z-index))
+		       :initial-value highest-z-index))
+    
+    
     (setf (the z-index) (1+ highest-z-index))
-
+    
     #+NIL
     ;; moved to initialize-instance :around (node-mixin)
     (setf (krma::node-children (the scene))
@@ -705,7 +708,7 @@
 	(ring-initialize self)
 	
 	(ring-link-new-element-at-start self *echo-area-window*))
-
+    
     #+NOTYET
     (unless (typep self 'echo-area-window)
       (let ((basket (adhoc::slot-basket self 'adhoc-scene-graph::origin)))

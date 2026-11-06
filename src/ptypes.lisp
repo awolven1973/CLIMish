@@ -27,7 +27,8 @@
 
 (in-package :climish)
 
-(defclass presentation-type-class (standard-class) ())
+(defclass presentation-type-class (standard-class)
+  ((klass-name :accessor klass-name :initarg :klass-name)))
 
 (defmethod validate-superclass ((class presentation-type-class)
 				(superclass standard-class))
@@ -874,7 +875,7 @@
 
 
 (defun class-proper-name (class &optional environment)
-  (let ((name (class-name class)))
+  (let ((name (or (class-name class) (klass-name class))))
     (if (and name (symbolp name)
              (or (eq (find-class-that-works name nil environment) class)
                  ;; If there is a forward-referenced compile-time class
@@ -1073,7 +1074,7 @@
                ;; very bad things to happen
                #+CCL-2 (setf (slot-value class 'ccl::slots) (cons nil (vector)))
                ;; If the class name couldn't be set while making the class, set it now
-               #-(or Genera Cloe-Runtime Lucid aclpc CCL-2) (setf (class-name class) class-name)))
+               #-(or Genera Cloe-Runtime Lucid aclpc CCL-2) (setf (klass-name class) class-name)))
             ((progn
 	       #+SBCL
 	       (setf (slot-value class 'sb-pcl::%class-precedence-list)
@@ -1575,7 +1576,7 @@
 ;;; This is essentially the inverse of find-presentation-type-class
 (defmethod class-presentation-type-name ((class presentation-type-class) &optional environment)
   (declare (ignore environment))
-  (second (class-name class)))
+  (second (klass-name class)))
 
 (defmethod class-presentation-type-name ((class class) &optional environment)
   (class-proper-name class environment))
@@ -1709,7 +1710,8 @@
         (push (ecase (first generic-lambda-list)
                 (type-key `(,type-key-var
                             ,(cond ((eq kind ':default) `t)
-                                   ((eq (class-name class) presentation-type-name)
+                                   ((or (eq (class-name class) presentation-type-name)
+					(eq (klass-name class) presentation-type-name))
                                     presentation-type-name)
                                    (t
                                     #+(or CCL-2 aclpc) (gethash class *presentation-class-type-table*)
@@ -1936,7 +1938,7 @@
     (unless description
       (setq description (substitute #\space #\- (string-downcase
 						 (if (symbolp name) name
-						     (class-name name))))))
+						     (or (class-name name) (klass-name name)))))))
     ;; Convert :inherit-from into what we need to inherit methods and map over supertypes
     (multiple-value-bind (direct-supertypes parameter-massagers options-massagers)
         (analyze-inherit-from inherit-from parameters-ll options-ll)
@@ -2035,7 +2037,7 @@
                     (slot-value history 'name)))
                ((symbolp history) history)
                (t nil)))
-     ',(not (null (member (class-name object) *presentation-type-parameters-are-types*)))
+     ',(not (null (member (klass-name object) *presentation-type-parameters-are-types*)))
      nil                        ;parameter-massagers don't matter
      nil))                        ;options-massagers don't matter
 
