@@ -115,7 +115,7 @@
 (defmethod clim:handle-event ((self context-menu-mixin) (event clim:pointer-exit-event))
   (destroy-window self))
 
-(defobject button-mixin (clim:presentation selectable-mixin group-mixin view-mixin)
+(defobject context-menu-button-mixin (clim:presentation button-mixin)
   :inputs
   (title			  
    command
@@ -127,17 +127,17 @@
    presentation-object
    presentation-type))
 
-(defmethod clim:presentation-object ((self button-mixin))
-  (the presentation-object))
-
-(defmethod clim:presentation-type ((self button-mixin))
-  (the presentation-type))
-
-(defobject context-button (button-mixin)
+(defobject context-button (context-menu-button-mixin)
   :inputs
   ((color :visual (the style window-bg-color))))
 
-(defmethod rm-draw-node ((self button-mixin))
+(defmethod clim:presentation-object ((self context-menu-button-mixin))
+  (the presentation-object))
+
+(defmethod clim:presentation-type ((self context-menu-button-mixin))
+  (the presentation-type))
+
+(defmethod rm-draw-node ((self context-menu-button-mixin))
   (when (the command)
     (push
      (scene-add-filled-2d-rectangle-list-primitive

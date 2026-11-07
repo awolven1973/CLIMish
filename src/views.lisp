@@ -247,7 +247,7 @@
 
 
 
-(defobject title-bar-button-mixin (selectable-mixin group-mixin view-mixin)
+(defobject button-mixin (selectable-mixin group-mixin view-mixin)
   :inputs
   ((size :visual))
   
@@ -258,19 +258,27 @@
    (height (+ (the size) (* 2 (the style frame-padding-y))))))
 
 
-(defobject iconify-button (title-bar-button-mixin)
+
+
+(defobject iconify-button (button-mixin)
+  :inputs
+  ((value t)))
+
+(defobject window-iconify-button (iconify-button)
   :attributes
   ((value :eager (the window iconified?))))
 
-
-(defobject close-button (title-bar-button-mixin)
+(defobject close-button (button-mixin)
   :attributes
   ((cross-extent (1- (* (the size) 0.5 0.7071)))))
 
-(defobject transparency-button (title-bar-button-mixin)
+(defobject window-close-button (close-button))
+
+(defobject transparency-button (button-mixin)
   :inputs
   ((opaque? :visual t)))
 
+(defobject window-transparency-button (transparency-button))
 
 (defobject menu-bar (selectable-mixin group-mixin view-mixin))
 
@@ -293,10 +301,14 @@
    (pad-left (+ (the style frame-padding-x) (if (eq (the style window-menu-button-position) :left)
 						  (the button-size)
 						  0)))
-   (pad-right (the style frame-padding-x)))
+   (pad-right (the style frame-padding-x))
+
+   (title-bar-color :uncached (if (the iconified?)
+				  (if (the window focused?) (the style title-bg-active-color) (the style title-bg-collapsed-color))
+				  (if (the window focused?) (the style title-bg-active-color) (the style title-bg-color)))))
   
   :components
-  ((close-button :type (if (the close-button?) 'close-button 'null-object)
+  ((close-button :type (if (the close-button?) 'window-close-button 'null-object)
 		 :eager t
 		 group (the group)
 		 size (the button-size)
@@ -304,7 +316,7 @@
 			   (the button-size)
 			   (* 2 (the style frame-padding-x))))
 
-   (iconify-button :type (if (the iconify-button?) 'iconify-button 'null-object)
+   (iconify-button :type (if (the iconify-button?) 'window-iconify-button 'null-object)
 		   :eager t
 		    group (the group)
 		    size (the button-size)
@@ -316,7 +328,7 @@
 					    (the button-size))
 					4
 					(* 2 (the style frame-padding-x))))))
-   (transparency-button :type (if (the transparency-button?) 'transparency-button 'null-object)
+   (transparency-button :type (if (the transparency-button?) 'window-transparency-button 'null-object)
 			:eager t
 			group (the group)
 			size (the button-size)
@@ -340,28 +352,15 @@
   (let* ((scene (the scene))
 	 (style (the style))
 	 (window (the window))
-	 (group (the group))
-	 (focused? (send window focused?)))
-    
-    (if (the iconified?)
-	(let ((title-bar-color (if focused? (send style title-bg-active-color) (send style title-bg-collapsed-color))))
-	  ;; draw just title bar
-	  (push
-	   (scene-add-filled-2d-rectangle-list-primitive
-	    scene group nil title-bar-color
-	    (list (the x0) (the y0) (the x1) (the y1))
-	    (the object-id)
-	    (the elevation))
-	   (the primitive-handles)))
-    
-	(let ((title-bar-color (if focused? (send style title-bg-active-color) (send style title-bg-color))))
-	  (push
-	   (scene-add-filled-2d-rectangle-list-primitive
-	    scene group nil title-bar-color
-	    (list (the x0) (the y0) (the x1) (the y1))
-	    (the object-id)
-	    (the elevation))
-	   (the primitive-handles))))
+	 (group (the group)))
+
+    (push
+     (scene-add-filled-2d-rectangle-list-primitive
+      scene group nil (the title-bar-color)
+      (list (the x0) (the y0) (the x1) (the y1))
+      (the object-id)
+      (the elevation))
+     (the primitive-handles))
 
     (let ((layout-r-x0 (+ (the x0) (send style frame-padding-x)))
 	  (layout-r-y0 (the y0)))
@@ -407,13 +406,6 @@
 
   :inputs
   ((parent (main-window clim:*default-frame-manager*))
-   #+NIL
-   (scene (krma:default-scene))
-   ;;(style :visual *style*)
-   ;;(color :visual (the style window-bg-color))
-   ;;(font :visual (the style current-font))
-   ;;(iconified? :visual nil)
-   ;;(focused? :visual nil)
    (resizable? :visual t)
    (menu-bar? :visual nil)
    (scrollbar-x? :visual nil)
@@ -554,7 +546,7 @@
     (when (eq homemade-window (focused-window (application-frame homemade-window)))
       (unfocus-window homemade-window))
     (forget-object-recursively homemade-window)
-    (unless (fset:empty? (krma::node-children scene))
+    (when (fset:empty? (krma::node-children scene))
       (setf (krma::immediate-mode-work-function-1 (window-display homemade-window)) nil))
     (values)))
 
@@ -566,19 +558,12 @@
   (if (the opaque?)
       (setf (the opaque?) nil)
       (setf (the opaque?) t))
-  #+NIL(rm-redraw-node-recursively (the window))
   (values))
 
-(defmethod clim:handle-event ((button iconify-button) (event clim:pointer-button-press-event))
+(defmethod clim:handle-event ((button window-iconify-button) (event clim:pointer-button-press-event))
   (if (send button window iconified?)
       (setf (send button window iconified?) nil)
       (setf (send button window iconified?) t)))
-
-(defmethod clim:handle-event ((button title-bar-button-mixin) (event clim:pointer-boundary-event))
-  (call-next-method)
-  #+NIL(rm-redraw-node-recursively button)
-  (values))
-
 
 
 (defmethod clui::window-p ((window homemade-window-mixin))
@@ -1012,44 +997,44 @@
 
 (defmethod rm-draw-node ((self iconify-button))
 
-  (let* ((scene (the scene))
-	 (style (the style))
-	 (font-size (font-size (send style current-font)))
-	 (text-col (send style text-color))
-	 (object-id (the object-id))
-	 (group (the group))
-	 (elevation (the elevation))
-	 (hovered? (the hovered?))
-	 (window (the window))
-	 (dock-node? nil))
+  (when (the visible?)
+    (let* ((scene (the scene))
+	   (style (the style))
+	   (font-size (font-size (send style current-font)))
+	   (text-col (send style text-color))
+	   (object-id (the object-id))
+	   (group (the group))
+	   (elevation (the elevation))
+	   (hovered? (the hovered?))
+	   (dock-node? nil))
 
-    (push (scene-add-filled-2d-circle-primitive scene group nil (if hovered? (send style button-hovered-color) 0)
-						(the center-x) (the center-y) (max 2.0f0 (1+ (* 0.5f0 font-size)))
-						12
-						object-id
-						elevation)
-	  (the primitive-handles))
+      (push (scene-add-filled-2d-circle-primitive scene group nil (if hovered? (send style button-hovered-color) 0)
+						  (the center-x) (the center-y) (max 2.0f0 (1+ (* 0.5f0 font-size)))
+						  12
+						  object-id
+						  elevation)
+	    (the primitive-handles))
 
-    (if dock-node?
-	(push (scene-add-arrow-dock-menu scene group
-					 (+ (the x) (send style frame-padding-x))
-					 (+ (the y) (send style frame-padding-y))
-					 (font-size (send style current-font))
-					 text-col
-					 object-id
-					 (1+ elevation)
-					 :style style)
-	      (the primitive-handles))
-	(push (scene-add-arrow scene group
-			       (+ (the x) (send style frame-padding-x))
-			       (+ (the y) (send style frame-padding-y))
-			       text-col (if (send window iconified?) :right :down)
-			       1.0f0
-			       object-id
-			       (1+ elevation)
-			       :style style)
-	      (the primitive-handles)))
-    (values)))
+      (if dock-node?
+	  (push (scene-add-arrow-dock-menu scene group
+					   (+ (the x) (send style frame-padding-x))
+					   (+ (the y) (send style frame-padding-y))
+					   (font-size (send style current-font))
+					   text-col
+					   object-id
+					   (1+ elevation)
+					   :style style)
+		(the primitive-handles))
+	  (push (scene-add-arrow scene group
+				 (+ (the x) (send style frame-padding-x))
+				 (+ (the y) (send style frame-padding-y))
+				 text-col (if (the value) :right :down)
+				 1.0f0
+				 object-id
+				 (1+ elevation)
+				 :style style)
+		(the primitive-handles)))))
+  (values))
 
 #+NOTYET
 (defmethod rm-draw-node ((menu-bar menu-bar))

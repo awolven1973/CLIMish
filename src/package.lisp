@@ -129,7 +129,7 @@
 	   #:rm-redraw-node-recursively
 	   #:rm-erase-node
 	   #:rm-erase-node-recursively
-	   #:title-bar-button-mixin
+	   #:button-mixin
 	   #:size
 	   #:center-x
 	   #:center-y
@@ -148,8 +148,6 @@
 	   #:alpha
 	   #:title
 	   #:button-size
-	   #:iconify-button?
-	   #:close-button?
 	   #:pad-left
 	   #:pad-right
 	   #:homemade-window-mixin
@@ -160,6 +158,9 @@
 	   #:iconify-button
 	   #:close-button
 	   #:transparency-button
+	   #:window-iconify-button
+	   #:window-close-button
+	   #:window-transparency-button
 	   #:menu-bar
 	   #:title-bar
 	   #:border-indicies
